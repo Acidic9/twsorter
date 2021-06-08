@@ -27,6 +27,19 @@ impl Config {
 
         serde_yaml::from_reader(config_file).map_err(anyhow::Error::from)
     }
+
+    fn detect_tw_config_file() -> Option<&'static str> {
+        let search_files = vec!["tailwind.config.js", "tailwind.config.cjs"];
+        if let Ok(dir) = current_dir() {
+            for search_file in search_files {
+                if dir.join(search_file).exists() {
+                    return Some(search_file);
+                }
+            }
+        }
+
+        None
+    }
 }
 
 fn config_default_files() -> Vec<String> {
@@ -38,7 +51,9 @@ fn config_default_patterns() -> Vec<Pattern> {
 }
 
 fn config_default_tw_config() -> String {
-    "tailwind.config.js".to_string()
+    Config::detect_tw_config_file()
+        .unwrap_or("tailwind.config.js")
+        .to_string()
 }
 
 impl Default for Config {
