@@ -1,0 +1,6 @@
+/target
+/node_modules
+/html
+tailwind.config.cjs
+package.json
+yarn.lock
