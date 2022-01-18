@@ -6,9 +6,7 @@ use tokio::{
     fs::{create_dir_all, read, write},
     process::Command,
 };
-
-use crate::config::twconfig::TwConfig;
-use crate::plugins::schema::Plugins;
+use twsorter::{plugins::schema::Plugins, twconfig::TwConfig};
 
 pub async fn run(tw_config_file: &str) -> Result<(TwConfig, Plugins)> {
     let cache_path = home_dir()

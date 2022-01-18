@@ -1,18 +1,2 @@
-[package]
-name = "twsorter"
-version = "0.1.0"
-authors = ["Ari Seyhun <ariseyhun@live.com.au>"]
-edition = "2018"
-
-[dependencies]
-anyhow = "1.0"
-futures = "0.3"
-glob = "0.3"
-hashlink = { version = "0.7", features = ["serde", "serde_impl"] }
-home = "0.5"
-lazy_static = "1.4"
-regex = "1.5"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.8"
-tokio = { version = "1", features = ["full"] }
+[workspace]
+members = ["twsorter", "twsorter-cli"]

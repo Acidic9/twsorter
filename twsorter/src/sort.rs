@@ -2,14 +2,11 @@ use std::{cmp::Ordering, path::Path};
 
 use anyhow::Result;
 use regex::Captures;
+#[cfg(feature = "file")]
 use tokio::fs::{read_to_string, write};
 
-use crate::{
-    config::{pattern::Pattern, Config},
-    sort::tw_class::TwClass,
-};
-
-mod tw_class;
+#[cfg(feature = "file")]
+use crate::config::Config;
 
 pub fn sort_classes(
     classes_order: &[impl AsRef<str>],
@@ -51,17 +48,7 @@ pub fn sort_classes(
             .state
             .and_then(|state| states_order.iter().position(|s| s.as_ref() == state));
 
-        // A or B have unknown selector
-        if a_class_index.is_some() && b_class_index.is_none() {
-            // B has unknown class
-            return Ordering::Greater;
-        }
-        if a_class_index.is_none() && b_class_index.is_some() {
-            // A has unknown class
-            return Ordering::Less;
-        }
-
-        // Sort by media query
+        // Sort by state
         if !a_class.has_state() && b_class.has_state() {
             return Ordering::Less;
         }
@@ -77,6 +64,16 @@ pub fn sort_classes(
             if a_state_index > b_state_index {
                 return Ordering::Greater;
             }
+        }
+
+        // A or B have unknown selector
+        if a_class_index.is_some() && b_class_index.is_none() {
+            // B has unknown class
+            return Ordering::Greater;
+        }
+        if a_class_index.is_none() && b_class_index.is_some() {
+            // A has unknown class
+            return Ordering::Less;
         }
 
         // Sort based on sorted selector
@@ -100,6 +97,7 @@ pub fn sort_classes(
     )
 }
 
+#[cfg(feature = "file")]
 pub async fn sort_file(
     path: impl AsRef<Path>,
     config: &Config,
@@ -114,8 +112,10 @@ pub async fn sort_file(
 
     let mut content = read_to_string(path.as_ref()).await?;
 
-    for Pattern(ref ex) in &config.patterns {
-        content = ex
+    for glob_pattern in &config.patterns {
+        content = glob_pattern
+            .pattern
+            .0
             .replace_all(&content, |caps: &Captures| {
                 let mut iter = caps
                     .iter()
@@ -130,7 +130,11 @@ pub async fn sort_file(
                 let classes = &capture_str[classes_start..classes_start + classes_end];
                 let after = &capture_str[classes_start + classes_end..];
 
+                let start = chrono::Utc::now();
                 let sorted_classes = sort_classes(classes_order, states_order, classes);
+                let end = chrono::Utc::now();
+                let duration = end - start;
+                println!("Time taken: {}ms", duration.num_milliseconds());
 
                 [before, &sorted_classes, after].concat()
             })
@@ -140,4 +144,34 @@ pub async fn sort_file(
     write(path.as_ref(), content).await?;
 
     Ok(())
+}
+
+pub struct TwClass<'t> {
+    pub class: &'t str,
+    pub state: Option<&'t str>,
+}
+
+impl<'t> TwClass<'t> {
+    pub fn has_state(&self) -> bool {
+        self.state.is_some()
+    }
+}
+
+impl<'t> From<&'t str> for TwClass<'t> {
+    fn from(from_str: &'t str) -> Self {
+        let mut parts = from_str.splitn(2, ':');
+        let head = parts.next().unwrap_or_default();
+        let tail = parts.next();
+        if let Some(tail) = tail {
+            Self {
+                class: tail,
+                state: Some(head),
+            }
+        } else {
+            Self {
+                class: head,
+                state: None,
+            }
+        }
+    }
 }

@@ -62,8 +62,5 @@ pub fn from_plugins(root: Plugins) -> Result<Vec<String>> {
 
     classes.dedup();
 
-    // let output_file = File::create("./output.json").unwrap();
-    // serde_json::to_writer_pretty(output_file, &classes)?;
-
     Ok(classes)
 }
